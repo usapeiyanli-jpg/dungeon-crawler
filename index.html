@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fist &amp; Fathom — Dungeon Crawler</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="shell">
+  <div id="stage">
+    <canvas id="game" width="960" height="600"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-left">
+        <div class="bar-wrap">
+          <div class="bar-label">HP</div>
+          <div class="bar"><div id="hpfill" class="fill hp"></div><span id="hptext">10 / 10</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip">DMG <b id="s-dmg">1</b></span>
+          <span class="chip">SPD <b id="s-spd">1.0</b></span>
+          <span class="chip">RCH <b id="s-rch">1.0</b></span>
+          <span class="chip">RATE <b id="s-rate">1.0</b></span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="floor">FLOOR <b id="s-floor">1</b></div>
+        <div class="coins">◆ <b id="s-coins">0</b></div>
+      </div>
+    </div>
+
+    <div id="toast" class="hidden"></div>
+
+    <!-- Title -->
+    <div id="title" class="overlay">
+      <h1>FIST <span>&amp;</span> FATHOM</h1>
+      <p class="tag">A knuckles-only descent into the dark.</p>
+      <div class="keys">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</div>
+        <div><kbd>Space</kbd> / <kbd>J</kbd> punch</div>
+        <div><kbd>E</kbd> take the stairs</div>
+      </div>
+      <button id="btn-start" class="big">DESCEND</button>
+      <p class="best">Deepest run: <b id="best-floor">—</b></p>
+    </div>
+
+    <!-- Shop -->
+    <div id="shop" class="overlay hidden">
+      <h2>THE HOLLOW MERCHANT</h2>
+      <p class="tag">Floor <b id="shop-floor">2</b> awaits. You carry <b class="gold">◆ <span id="shop-coins">0</span></b>.</p>
+      <div id="shop-items" class="items"></div>
+      <button id="btn-next" class="big">DESCEND</button>
+    </div>
+
+    <!-- Death -->
+    <div id="dead" class="overlay hidden">
+      <h2 class="bad">YOU DIED</h2>
+      <p class="tag">The dungeon keeps what it kills.</p>
+      <div class="stats">
+        <div><span>Floor reached</span><b id="d-floor">1</b></div>
+        <div><span>Kills</span><b id="d-kills">0</b></div>
+        <div><span>Coins earned</span><b id="d-coins">0</b></div>
+      </div>
+      <button id="btn-retry" class="big">TRY AGAIN</button>
+    </div>
+  </div>
+  <p id="footnote">Clear every enemy to unlock the stairs. Punch first. Ask nothing.</p>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
