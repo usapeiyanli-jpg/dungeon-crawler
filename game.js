@@ -225,7 +225,7 @@ const KINDS = {
   bat:    { hp: 2,  speed: 78, dmg: 1, r: 9,  coin: 4,  color: '#b58cf0', dark: '#5b3d92', touch: 0.7 },
   brute:  { hp: 8,  speed: 55,  dmg: 2, r: 15, coin: 9,  color: '#e0854a', dark: '#8a4520', touch: 1.1 },
   wisp:   { hp: 4,  speed: 78,  dmg: 2, r: 10, coin: 7,  color: '#63c8e8', dark: '#276a86', touch: 0.8 },
-  warden: { hp: 40, speed: 62,  dmg: 3, r: 22, coin: 60, color: '#d2413a', dark: '#6d1a17', touch: 1.2, boss: true }
+  warden: { hp: 28, speed: 55,  dmg: 2, r: 22, coin: 60, color: '#d2413a', dark: '#6d1a17', touch: 1.2, boss: true }
 };
 
 function spawnEnemy(kind, x, y, floor) {

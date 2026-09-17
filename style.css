@@ -36,11 +36,10 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 
 @media (pointer:coarse), (max-width:700px){
   .touch-enabled #mobile-controls{
-    position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;
-    padding:18px 20px 20px;pointer-events:none;z-index:5;
+    position:absolute;inset:0;display:block;pointer-events:none;z-index:5;
   }
   .joystick,.mobile-actions{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
-  .joystick{width:128px;height:128px;display:grid;place-items:center}
+  .joystick{position:absolute;left:20px;bottom:20px;width:128px;height:128px;display:grid;place-items:center}
   .joystick-ring{
     width:112px;height:112px;border:2px solid rgba(220,231,255,.32);border-radius:50%;
     background:rgba(8,13,36,.48);box-shadow:0 0 0 8px rgba(8,13,36,.18),inset 0 0 24px rgba(154,210,255,.08);
@@ -51,7 +50,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
     background:rgba(154,210,255,.72);border:2px solid rgba(255,255,255,.65);
     box-shadow:0 5px 16px rgba(0,0,0,.4);transform:translate(0,0);transition:transform .06s;
   }
-  .mobile-actions{display:flex;align-items:flex-end;gap:12px}
+  .mobile-actions{position:absolute;right:20px;bottom:20px;display:flex;align-items:flex-end;gap:12px}
   .touch-button{
     width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.45);
     color:#fff;background:rgba(30,25,50,.78);font:700 22px ui-monospace,monospace;
