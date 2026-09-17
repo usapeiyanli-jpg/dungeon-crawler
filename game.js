@@ -32,6 +32,87 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 const held = names => names.some(n => keys[n]);
 
 /* ------------------------------------------------------------
+   Touch controls
+   ------------------------------------------------------------ */
+const joystick = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystick-knob');
+const punchButton = document.getElementById('btn-punch');
+const interactButton = document.getElementById('btn-interact');
+const touchToggle = document.getElementById('touch-toggle');
+let joystickPointer = null;
+
+function setTouchControls(enabled) {
+  document.documentElement.classList.toggle('touch-enabled', enabled);
+  if (touchToggle) touchToggle.checked = enabled;
+  localStorage.setItem('ff-touch-controls', enabled ? '1' : '0');
+  if (!enabled) {
+    clearJoystick();
+    keys[' '] = false;
+    keys.e = false;
+  }
+}
+
+const touchControlsSaved = localStorage.getItem('ff-touch-controls') === '1';
+setTouchControls(touchControlsSaved);
+if (touchToggle) touchToggle.addEventListener('change', () => setTouchControls(touchToggle.checked));
+if (punchButton) punchButton.textContent = 'PUNCH';
+
+function clearJoystick() {
+  for (const key of ['w', 'a', 's', 'd']) keys[key] = false;
+  joystickKnob.style.transform = 'translate(0, 0)';
+}
+
+function updateJoystick(clientX, clientY) {
+  const rect = joystick.getBoundingClientRect();
+  const max = rect.width * 0.34;
+  let x = clientX - (rect.left + rect.width / 2);
+  let y = clientY - (rect.top + rect.height / 2);
+  const length = Math.hypot(x, y) || 1;
+  if (length > max) { x *= max / length; y *= max / length; }
+  joystickKnob.style.transform = `translate(${x}px, ${y}px)`;
+
+  const nx = x / max, ny = y / max;
+  keys.a = nx < -0.2; keys.d = nx > 0.2;
+  keys.w = ny < -0.2; keys.s = ny > 0.2;
+}
+
+if (joystick) {
+  joystick.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    joystickPointer = e.pointerId;
+    joystick.setPointerCapture(e.pointerId);
+    updateJoystick(e.clientX, e.clientY);
+  });
+  joystick.addEventListener('pointermove', e => {
+    if (e.pointerId === joystickPointer) updateJoystick(e.clientX, e.clientY);
+  });
+  const releaseJoystick = e => {
+    if (e.pointerId === joystickPointer) { joystickPointer = null; clearJoystick(); }
+  };
+  joystick.addEventListener('pointerup', releaseJoystick);
+  joystick.addEventListener('pointercancel', releaseJoystick);
+}
+
+if (punchButton) {
+  const setPunch = down => {
+    keys[' '] = down;
+    punchButton.classList.toggle('active', down);
+  };
+  punchButton.addEventListener('pointerdown', e => { e.preventDefault(); punchButton.setPointerCapture(e.pointerId); setPunch(true); });
+  punchButton.addEventListener('pointerup', () => setPunch(false));
+  punchButton.addEventListener('pointercancel', () => setPunch(false));
+}
+
+if (interactButton) {
+  interactButton.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    interactButton.classList.add('active');
+    keys.e = true;
+    setTimeout(() => { keys.e = false; interactButton.classList.remove('active'); }, 120);
+  });
+}
+
+/* ------------------------------------------------------------
    Game state
    ------------------------------------------------------------ */
 const game = {
@@ -68,6 +149,16 @@ const player = {
   flash: 0,
   step: 0
 };
+
+// A small deterministic starfield keeps the background atmospheric without
+// adding image assets or changing from run to run.
+const stars = Array.from({ length: 150 }, (_, i) => ({
+  x: (i * 83.17) % VW,
+  y: (i * 47.53) % VH,
+  size: 0.5 + ((i * 17) % 10) / 10,
+  phase: (i * 1.73) % 6.28,
+  tint: i % 9 === 0 ? '#9ad2ff' : i % 13 === 0 ? '#f2c14e' : '#dce7ff'
+}));
 
 const upgrades = { knuckles: 0, vitality: 0, boots: 0, reach: 0, hands: 0 };
 
@@ -131,7 +222,7 @@ const centerOf = r => ({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE })
    ------------------------------------------------------------ */
 const KINDS = {
   slime:  { hp: 3,  speed: 42,  dmg: 1, r: 11, coin: 3,  color: '#6fd06f', dark: '#2f7a37', touch: 0.9 },
-  bat:    { hp: 2,  speed: 105, dmg: 1, r: 9,  coin: 4,  color: '#b58cf0', dark: '#5b3d92', touch: 0.7 },
+  bat:    { hp: 2,  speed: 78, dmg: 1, r: 9,  coin: 4,  color: '#b58cf0', dark: '#5b3d92', touch: 0.7 },
   brute:  { hp: 8,  speed: 55,  dmg: 2, r: 15, coin: 9,  color: '#e0854a', dark: '#8a4520', touch: 1.1 },
   wisp:   { hp: 4,  speed: 78,  dmg: 2, r: 10, coin: 7,  color: '#63c8e8', dark: '#276a86', touch: 0.8 },
   warden: { hp: 40, speed: 62,  dmg: 3, r: 22, coin: 60, color: '#d2413a', dark: '#6d1a17', touch: 1.2, boss: true }
@@ -147,7 +238,8 @@ function spawnEnemy(kind, x, y, floor) {
     dmg: k.dmg + Math.floor((floor - 1) / 4),
     coin: k.coin, boss: !!k.boss,
     touchCd: 0, flash: 0, knock: { x: 0, y: 0 },
-    wob: Math.random() * 6.28, dead: false
+    wob: Math.random() * 6.28, dead: false,
+    path: [], pathTimer: Math.random() * 0.25
   });
 }
 
@@ -339,6 +431,45 @@ function updatePlayer(dt) {
 /* ------------------------------------------------------------
    Enemy AI
    ------------------------------------------------------------ */
+function findPath(fromX, fromY, toX, toY) {
+  const sx = clamp(Math.floor(fromX / TILE), 0, MAPW - 1);
+  const sy = clamp(Math.floor(fromY / TILE), 0, MAPH - 1);
+  const ex = clamp(Math.floor(toX / TILE), 0, MAPW - 1);
+  const ey = clamp(Math.floor(toY / TILE), 0, MAPH - 1);
+  const start = sy * MAPW + sx;
+  const goal = ey * MAPW + ex;
+  if (solid(sx, sy) || solid(ex, ey) || start === goal) return [];
+
+  const cameFrom = new Int32Array(MAPW * MAPH);
+  cameFrom.fill(-1);
+  const queue = [start];
+  cameFrom[start] = start;
+  let head = 0;
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  while (head < queue.length) {
+    const current = queue[head++];
+    if (current === goal) break;
+    const cx = current % MAPW, cy = Math.floor(current / MAPW);
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= MAPW || ny >= MAPH || solid(nx, ny)) continue;
+      const next = ny * MAPW + nx;
+      if (cameFrom[next] !== -1) continue;
+      cameFrom[next] = current;
+      queue.push(next);
+    }
+  }
+
+  if (cameFrom[goal] === -1) return [];
+  const path = [];
+  for (let current = goal; current !== start; current = cameFrom[current]) {
+    path.push({ x: (current % MAPW + 0.5) * TILE, y: (Math.floor(current / MAPW) + 0.5) * TILE });
+  }
+  path.reverse();
+  return path;
+}
+
 function updateEnemies(dt) {
   for (const e of game.enemies) {
     e.flash = Math.max(0, e.flash - dt);
@@ -348,15 +479,27 @@ function updateEnemies(dt) {
     const d = dist(e, player);
     let ax = 0, ay = 0;
 
-    if (d < 380) {
-      ax = (player.x - e.x) / (d || 1);
-      ay = (player.y - e.y) / (d || 1);
-      if (e.kind === 'bat') {              // erratic flight
-        const s = Math.sin(e.wob) * 0.8;
-        const t = ax;
-        ax = ax * 0.7 - ay * s;
-        ay = ay * 0.7 + t * s;
+    if (d < 520) {
+      e.pathTimer -= dt;
+      if (e.pathTimer <= 0) {
+        // Aim for the space directly in front of the player when close, so
+        // enemies enter the punch lane instead of circling to the blind side.
+        const aimX = d < 180 ? player.x + player.dx * 22 : player.x;
+        const aimY = d < 180 ? player.y + player.dy * 22 : player.y;
+        e.path = findPath(e.x, e.y, aimX, aimY);
+        e.pathTimer = 0.22 + Math.random() * 0.12;
       }
+
+      // Follow the next tile center, so a wall becomes a turn in the route
+      // instead of an obstacle that the enemy endlessly presses against.
+      while (e.path.length && Math.hypot(e.path[0].x - e.x, e.path[0].y - e.y) < 8) e.path.shift();
+      const target = e.path[0] || {
+        x: d < 180 ? player.x + player.dx * 22 : player.x,
+        y: d < 180 ? player.y + player.dy * 22 : player.y
+      };
+      const td = Math.hypot(target.x - e.x, target.y - e.y) || 1;
+      ax = (target.x - e.x) / td;
+      ay = (target.y - e.y) / td;
       if (e.kind === 'wisp' && d < 70) {   // keeps its distance, then lunges
         ax *= -0.6; ay *= -0.6;
       }
@@ -370,8 +513,9 @@ function updateEnemies(dt) {
       if (o === e) continue;
       const dd = dist(e, o);
       if (dd < e.r + o.r && dd > 0.01) {
-        ax += (e.x - o.x) / dd * 0.9;
-        ay += (e.y - o.y) / dd * 0.9;
+        // Keep breathing room without making the group orbit around the player.
+        ax += (e.x - o.x) / dd * 0.28;
+        ay += (e.y - o.y) / dd * 0.28;
       }
     }
 
@@ -381,7 +525,24 @@ function updateEnemies(dt) {
 
     moveEntity(e, (ax * e.speed + kx) * dt, (ay * e.speed + ky) * dt);
 
-    if (d < e.r + player.r - 2 && e.touchCd === 0) {
+    // The player is solid: enemies can touch the edge of the player, but
+    // never occupy the same space. Resolve the overlap after movement so
+    // knockback and pathfinding cannot push an enemy through the player.
+    const minDist = e.r + player.r;
+    let pdx = e.x - player.x, pdy = e.y - player.y;
+    let playerDist = Math.hypot(pdx, pdy);
+    if (playerDist < minDist) {
+      if (playerDist < 0.001) {
+        pdx = -player.dx || 0;
+        pdy = -player.dy || -1;
+        playerDist = Math.hypot(pdx, pdy);
+      }
+      const push = minDist - playerDist + 0.5;
+      moveEntity(e, pdx / playerDist * push, 0);
+      moveEntity(e, 0, pdy / playerDist * push);
+    }
+
+    if (dist(e, player) <= minDist + 1 && e.touchCd === 0) {
       e.touchCd = KINDS[e.kind].touch;
       hurtPlayer(e.dmg);
     }
@@ -694,6 +855,29 @@ function drawVignette() {
   ctx.fillRect(0, 0, VW, VH);
 }
 
+function drawSpaceBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, VH);
+  g.addColorStop(0, '#080d24');
+  g.addColorStop(.5, '#11152f');
+  g.addColorStop(1, '#050713');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+
+  const nebula = ctx.createRadialGradient(VW * .72, VH * .18, 10, VW * .72, VH * .18, 360);
+  nebula.addColorStop(0, 'rgba(81,67,170,.22)');
+  nebula.addColorStop(1, 'rgba(81,67,170,0)');
+  ctx.fillStyle = nebula;
+  ctx.fillRect(0, 0, VW, VH);
+
+  for (const star of stars) {
+    const alpha = 0.35 + (Math.sin(game.time * 1.7 + star.phase) + 1) * 0.2;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = star.tint;
+    ctx.fillRect(star.x, star.y, star.size, star.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
 /* A chevron pinned to the screen edge, pointing at something off-view. */
 function edgeMarker(worldX, worldY, color, size) {
   const sx = worldX - game.cam.x, sy = worldY - game.cam.y;
@@ -747,8 +931,7 @@ function drawPrompt() {
 }
 
 function render() {
-  ctx.fillStyle = '#07060b';
-  ctx.fillRect(0, 0, VW, VH);
+  drawSpaceBackground();
 
   ctx.save();
   const sh = game.shake;
@@ -906,6 +1089,10 @@ function die() {
   el('d-coins').textContent = game.earned;
   const record = Math.max(game.floor, +(localStorage.getItem('ff-best') || 0));
   localStorage.setItem('ff-best', record);
+  const dead = el('dead');
+  dead.classList.remove('death-enter');
+  void dead.offsetWidth;
+  dead.classList.add('death-enter');
   show('dead');
 }
 

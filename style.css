@@ -30,6 +30,39 @@ body{
 }
 canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 
+#mobile-controls{display:none}
+.touch-option{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.08em;opacity:.72;cursor:pointer}
+.touch-option input{accent-color:var(--gold);width:15px;height:15px;cursor:pointer}
+
+@media (pointer:coarse), (max-width:700px){
+  .touch-enabled #mobile-controls{
+    position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:18px 20px 20px;pointer-events:none;z-index:5;
+  }
+  .joystick,.mobile-actions{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+  .joystick{width:128px;height:128px;display:grid;place-items:center}
+  .joystick-ring{
+    width:112px;height:112px;border:2px solid rgba(220,231,255,.32);border-radius:50%;
+    background:rgba(8,13,36,.48);box-shadow:0 0 0 8px rgba(8,13,36,.18),inset 0 0 24px rgba(154,210,255,.08);
+    display:grid;place-items:center;
+  }
+  .joystick-knob{
+    width:50px;height:50px;border-radius:50%;
+    background:rgba(154,210,255,.72);border:2px solid rgba(255,255,255,.65);
+    box-shadow:0 5px 16px rgba(0,0,0,.4);transform:translate(0,0);transition:transform .06s;
+  }
+  .mobile-actions{display:flex;align-items:flex-end;gap:12px}
+  .touch-button{
+    width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.45);
+    color:#fff;background:rgba(30,25,50,.78);font:700 22px ui-monospace,monospace;
+    box-shadow:0 5px 16px rgba(0,0,0,.42);-webkit-tap-highlight-color:transparent;
+  }
+  .touch-button:active,.touch-button.active{transform:scale(.94);filter:brightness(1.2)}
+  .punch-button{background:rgba(164,54,48,.85);font-size:0;letter-spacing:.06em}
+  .punch-button::after{content:'PUNCH';font-size:11px}
+  .interact-button{width:48px;height:48px;color:#9ad2ff;font-size:16px}
+}
+
 .hidden{display:none !important}
 
 /* ---------- HUD ---------- */
@@ -78,6 +111,13 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:14px;padding:28px;text-align:center;
   backdrop-filter:blur(2px);
+}
+#dead.death-enter{
+  animation:deathFadeIn .85s cubic-bezier(.2,.75,.25,1) both;
+}
+@keyframes deathFadeIn{
+  from{opacity:0;transform:scale(1.025);filter:blur(5px)}
+  to{opacity:1;transform:scale(1);filter:blur(0)}
 }
 h1{
   margin:0;font-size:clamp(30px,6vw,58px);letter-spacing:.14em;

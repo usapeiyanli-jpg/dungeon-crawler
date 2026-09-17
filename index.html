@@ -11,6 +11,17 @@
   <div id="stage">
     <canvas id="game" width="960" height="600"></canvas>
 
+    <!-- Touch controls: keyboard controls remain available on desktop. -->
+    <div id="mobile-controls" aria-label="Touch controls">
+      <div id="joystick" class="joystick" aria-label="Move">
+        <div class="joystick-ring"><div id="joystick-knob" class="joystick-knob"></div></div>
+      </div>
+      <div class="mobile-actions">
+        <button id="btn-punch" class="touch-button punch-button" aria-label="Punch">✊</button>
+        <button id="btn-interact" class="touch-button interact-button" aria-label="Interact or descend">E</button>
+      </div>
+    </div>
+
     <!-- HUD -->
     <div id="hud" class="hidden">
       <div class="hud-left">
@@ -42,6 +53,7 @@
         <div><kbd>Space</kbd> / <kbd>J</kbd> punch</div>
         <div><kbd>E</kbd> take the stairs</div>
       </div>
+      <label class="touch-option"><input id="touch-toggle" type="checkbox"> <span>ENABLE TOUCH CONTROLS</span></label>
       <button id="btn-start" class="big">DESCEND</button>
       <p class="best">Deepest run: <b id="best-floor">—</b></p>
     </div>
